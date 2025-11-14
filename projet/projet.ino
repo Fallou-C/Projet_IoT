@@ -151,6 +151,8 @@ void ScanWiFi() {
     Serial.println(" networks found");
     Serial.println("Nr | SSID                             | RSSI | CH | Encryption | BSSID");
 
+    String atCommand = "AT+MSGHEX=";
+
     for (int i = 0; i < n; ++i) {
 
       // ----------- NOUVEAU FILTRE : ignorer téléphones -----------
@@ -193,12 +195,12 @@ void ScanWiFi() {
         bssidHex += String(bssid[j], HEX);
       }
       bssidHex.toUpperCase();
-      String atCommand = "AT+MSGHEX=" + bssidHex;
-      loraSerial.println(atCommand);
-
+      atCommand = atCommand + bssidHex;
+      
       Serial.println();
       delay(10);
     }
+    loraSerial.println(atCommand);
   }
 
   WiFi.scanDelete();
