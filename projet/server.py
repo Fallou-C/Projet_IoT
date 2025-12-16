@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
 from fastapi.responses import HTMLResponse
-from base_de_donnee import get_coordonnees
+import base_de_donnee
 
 app = FastAPI()
 
@@ -51,10 +51,13 @@ async def get_stored_macs():
     """Endpoint pour vérifier ce qui a été stocké"""
     return {"database": mac_storage}
 
+@app.get("/api/points")
+async def api_points():
+    # On appelle la fonction qui lit votre liste donnee_gps
+    return base_de_donnee.get_coordonnees()
 
 @app.get("/carte", response_class=HTMLResponse)
 async def affichage_carte():
-    data = get_coordonnees()
     html_content = """
     <!DOCTYPE html>
     <html>
@@ -73,22 +76,24 @@ async def affichage_carte():
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
             // 1. Centrer la carte sur le secteur (Paris 5ème/Jussieu)
+            // J'ai pris les coord. de "isir" comme centre approximatif
             var map = L.map('map').setView([48.845, 2.356], 16);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap'
             }).addTo(map);
 
-            // 2. Récupérer les données Python
+            // 2. Récupérer les données Python via l'API
             fetch('/api/points')
                 .then(response => response.json())
                 .then(data => {
-                    // Pour chaque lieu dans ta base de données...
+                    console.log("Données reçues :", data); // Pour vérifier dans la console du navigateur
+                    
                     data.forEach(lieu => {
-                        // ... on place un marqueur
+                        // Création du marqueur
                         var marker = L.marker([lieu.lat, lieu.lng]).addTo(map);
                         
-                        // ... et on ajoute une bulle d'info
+                        // Ajout de la bulle d'info
                         marker.bindPopup(
                             "<b>" + lieu.nom + "</b><br>" +
                             "Nombre d'adresses MAC : " + lieu.nb_mac
@@ -101,4 +106,3 @@ async def affichage_carte():
     </html>
     """
     return html_content
-
