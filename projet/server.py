@@ -1,7 +1,8 @@
-import asyncio
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
+from fastapi.responses import HTMLResponse
+from base_de_donnee import get_coordonnees
 
 app = FastAPI()
 
@@ -10,6 +11,7 @@ app = FastAPI()
 class MacInput(BaseModel):
     macAddresses: List[List[int]] # Liste de listes d'entiers
     taille: int
+    
 
 # Simulation d'une base de données pour stocker les résultats
 mac_storage = []
@@ -48,4 +50,55 @@ async def save_mac_addresses(data: MacInput):
 async def get_stored_macs():
     """Endpoint pour vérifier ce qui a été stocké"""
     return {"database": mac_storage}
+
+
+@app.get("/carte", response_class=HTMLResponse)
+async def affichage_carte():
+    data = get_coordonnees()
+    html_content = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Carte Jussieu/Sorbonne</title>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <style>
+            #map { height: 100vh; width: 100%; }
+            body { margin: 0; }
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script>
+            // 1. Centrer la carte sur le secteur (Paris 5ème/Jussieu)
+            var map = L.map('map').setView([48.845, 2.356], 16);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            // 2. Récupérer les données Python
+            fetch('/api/points')
+                .then(response => response.json())
+                .then(data => {
+                    // Pour chaque lieu dans ta base de données...
+                    data.forEach(lieu => {
+                        // ... on place un marqueur
+                        var marker = L.marker([lieu.lat, lieu.lng]).addTo(map);
+                        
+                        // ... et on ajoute une bulle d'info
+                        marker.bindPopup(
+                            "<b>" + lieu.nom + "</b><br>" +
+                            "Nombre d'adresses MAC : " + lieu.nb_mac
+                        );
+                    });
+                })
+                .catch(err => console.error("Erreur:", err));
+        </script>
+    </body>
+    </html>
+    """
+    return html_content
 
