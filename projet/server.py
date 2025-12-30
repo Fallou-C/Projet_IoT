@@ -54,7 +54,8 @@ async def get_stored_macs():
 @app.get("/api/points")
 async def api_points():
     # On appelle la fonction qui lit votre liste donnee_gps
-    return base_de_donnee.get_coordonnees()
+    data = base_de_donnee.get_coordonnees()
+    return data
 
 @app.get("/carte", response_class=HTMLResponse)
 async def affichage_carte():
@@ -106,3 +107,5 @@ async def affichage_carte():
     </html>
     """
     return html_content
+
+#ajouter les derniers adresse mac reçu et les comparer à ceux de la base de données puis faire une moyenne sur les coordonnées
