@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List
 from fastapi.responses import HTMLResponse
 import base_de_donnee
+from base_de_donnee import prevision_emplacement
 
 app = FastAPI()
 
@@ -14,7 +15,7 @@ class MacInput(BaseModel):
     
 
 # stocker en memoire les points calculés
-mac_storage = []
+coordonnee_liste = []
 
 @app.get("/")
 async def root():
@@ -36,28 +37,42 @@ async def save_mac_addresses(data: MacInput):
 
     # 3. Stockage des données
     # On ajoute les nouvelles adresses à notre liste globale
-    mac_storage.extend(data.macAddresses)
+    coordonnee_liste.extend(prevision_emplacement(data.macAddresses))
     
 	#on supprime les premières si y'en a trop
-    while(len(mac_storage) > 50):
-        mac_storage.pop(0)
+    while(len(coordonnee_liste) > 50):
+        coordonnee_liste.pop(0)
 
     return {
-        "message": "Adresses sauvegardées avec succès",
-        "adresses_recues": data.macAddresses,
-        "total_adresses_stockees": len(mac_storage)
+        "message": "Calcul terminé",
+        "points_ajoutés": coordonnee_liste[len(coordonnee_liste)],
+        "total_en_mémoire": len(coordonnee_liste)
     }
 
 @app.get("/voir-points")
 async def get_stored():
     """Endpoint pour vérifier ce qui a été stocké"""
-    return {"database": mac_storage}
+    return {"database": coordonnee_liste}
 
 @app.get("/api/points")
 async def api_points():
     # On appelle la fonction qui lit votre liste donnee_gps
     data = base_de_donnee.get_coordonnees()
     return data
+
+@app.get("/api/coordonnee")
+async def get_coordonne():
+    resultats = []
+    i = 0
+    for i in range(len(coordonnee_liste)//2):
+        # On crée un dictionnaire simple pour l'API
+        infos = {
+            "nom": i,
+            "lat": coordonnee_liste[i*2],
+            "lng": coordonnee_liste[i*2+1],
+        }
+        resultats.append(infos)
+    return {"database": resultats}
 
 @app.get("/carte", response_class=HTMLResponse)
 async def affichage_carte():
@@ -78,36 +93,61 @@ async def affichage_carte():
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
-            // 1. Centrer la carte sur le secteur (Paris 5ème/Jussieu)
-            // J'ai pris les coord. de "isir" comme centre approximatif
+            // 1. Initialisation de la carte
             var map = L.map('map').setView([48.845, 2.356], 16);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap'
             }).addTo(map);
 
-            // 2. Récupérer les données Python via l'API
+            // ---------------------------------------------------------
+            // 2. Chargement des POINTS DE LA BASE DE DONNÉES (Bleus)
+            // ---------------------------------------------------------
             fetch('/api/points')
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Données reçues :", data); // Pour vérifier dans la console du navigateur
-                    
                     data.forEach(lieu => {
-                        // Création du marqueur
+                        // Marqueur standard (BLEU par défaut)
                         var marker = L.marker([lieu.lat, lieu.lng]).addTo(map);
-                        
-                        // Ajout de la bulle d'info
                         marker.bindPopup(
-                            "<b>" + lieu.nom + "</b><br>" +
-                            "Nombre d'adresses MAC : " + lieu.nb_mac
+                            "<b>BASE DE DONNÉE: " + lieu.nom + "</b><br>" +
+                            "Nombre MAC: " + lieu.nb_mac
                         );
                     });
                 })
-                .catch(err => console.error("Erreur:", err));
+                .catch(err => console.error("Erreur BDD:", err));
+
+            // ---------------------------------------------------------
+            // 3. Chargement des POINTS CALCULÉS / DYNAMIQUES (Rouges)
+            // ---------------------------------------------------------
+            fetch('/api/coordonnee')
+                .then(response => response.json())
+                .then(data => {
+                    // data.database contient votre liste coordonnee_liste
+                    var points = data.database;
+
+                    // On utilise 'index' pour récupérer le numéro dans la liste (0, 1, 2...)
+                    points.forEach((point, index) => {
+                        
+                        // Création d'un point ROUGE (CircleMarker)
+                        var redDot = L.circleMarker([point.lat, point.lng], {
+                            color: 'red',       // Contour rouge
+                            fillColor: '#f03',  // Remplissage rouge vif
+                            fillOpacity: 0.8,
+                            radius: 10          // Taille du point
+                        }).addTo(map);
+
+                        // Popup avec l'indice du point
+                        redDot.bindPopup(
+                            "<b> Coordonée </b><br>" +
+                            "Point numéro : " + (index + 1)
+                        );
+                    });
+                })
+                .catch(err => console.error("Erreur Points Calculés:", err));
+
         </script>
     </body>
     </html>
     """
     return html_content
-
-#ajouter les derniers adresse mac reçu et les comparer à ceux de la base de données puis faire une moyenne sur les coordonnées
