@@ -80,3 +80,20 @@ def get_coordonnees():
         }
         resultats.append(infos)
     return resultats
+
+def prevision_emplacement(mac_addresses: List[List[int]]):
+    """
+    Fonction pour prévoir l'emplacement en fonction des adresses MAC reçues.
+    (À implémenter selon vos besoins spécifiques)
+    """
+    coordonnes = [0,0]
+    nb_points = 0
+    for donnee in donnee_gps:
+        for mac in mac_addresses:
+            if mac in donnee.macAddresses:
+                coordonnes[0] += donnee.latitude
+                coordonnes[1] += donnee.longitude
+                nb_points += 1
+    coordonnes[0] = coordonnes[0] / nb_points if nb_points > 0 else 0
+    coordonnes[1] = coordonnes[1] / nb_points if nb_points > 0 else 0
+    return coordonnes

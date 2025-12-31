@@ -13,7 +13,7 @@ class MacInput(BaseModel):
     taille: int
     
 
-# Simulation d'une base de données pour stocker les résultats
+# stocker en memoire les points calculés
 mac_storage = []
 
 @app.get("/")
@@ -32,6 +32,8 @@ async def save_mac_addresses(data: MacInput):
     if len(data.macAddresses) != data.taille:
         return {"error": "La taille déclarée ne correspond pas au nombre d'adresses"}
 
+    #On compare les adresses reçues avec celles de la base de donnéees et on calcule les coordonnées moyennes
+
     # 3. Stockage des données
     # On ajoute les nouvelles adresses à notre liste globale
     mac_storage.extend(data.macAddresses)
@@ -46,8 +48,8 @@ async def save_mac_addresses(data: MacInput):
         "total_adresses_stockees": len(mac_storage)
     }
 
-@app.get("/view-macs")
-async def get_stored_macs():
+@app.get("/voir-points")
+async def get_stored():
     """Endpoint pour vérifier ce qui a été stocké"""
     return {"database": mac_storage}
 
