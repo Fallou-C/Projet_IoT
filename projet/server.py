@@ -151,3 +151,47 @@ async def affichage_carte():
     </html>
     """
     return html_content
+
+from fastapi import Request
+
+
+# --- NOUVEL ENDPOINT POUR LORAWAN (TTN) ---
+@app.post("/api/lora-webhook")
+async def receive_lora_data(request: Request):
+    """
+    Reçoit les données envoyées par The Things Network (TTN).
+    """
+    try:
+        # 1. On récupère le gros JSON envoyé par TTN
+        ttn_data = await request.json()
+        print("Données reçues de TTN !") # Pour le debug
+
+        # 2. On cherche les données décodées
+        # TTN met les données utiles dans uplink_message -> decoded_payload
+        payload = ttn_data.get("uplink_message", {}).get("decoded_payload", {})
+        
+        # On suppose que le payload contient "macAddresses"
+        mac_addresses = payload.get("macAddresses", [])
+
+        if mac_addresses:
+            print(f"Adresses extraites : {mac_addresses}")
+            
+            # 3. On utilise VOTRE logique existante pour calculer la position
+            # (On réutilise la fonction importée de base_de_donnee)
+            nouveaux_points = prevision_emplacement(mac_addresses)
+            
+            # 4. On stocke le résultat dans la liste globale
+            coordonnee_liste.extend(nouveaux_points)
+            
+            # Nettoyage
+            while(len(coordonnee_liste) > 100):
+                coordonnee_liste.pop(0)
+                
+            return {"status": "succes", "points_calcules": len(nouveaux_points)//2}
+        else:
+            print("Aucune adresse MAC trouvée dans le payload TTN")
+            return {"status": "erreur", "message": "Pas de macAddresses dans le JSON"}
+
+    except Exception as e:
+        print(f"Erreur de traitement : {e}")
+        return {"status": "erreur", "detail": str(e)}
