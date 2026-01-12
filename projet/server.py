@@ -155,12 +155,9 @@ async def affichage_carte():
 from fastapi import Request
 
 
-# --- NOUVEL ENDPOINT POUR LORAWAN (TTN) ---
+# on tri içi car lora envoie un gros json
 @app.post("/api/lora-webhook")
 async def receive_lora_data(request: Request):
-    """
-    Reçoit les données envoyées par The Things Network (TTN).
-    """
     try:
         # 1. On récupère le gros JSON envoyé par TTN
         ttn_data = await request.json()
