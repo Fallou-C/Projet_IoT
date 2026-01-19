@@ -34,7 +34,7 @@ donnee_gps = [
     ),
     # 2. ISIR
     Donnee(
-        nom="isir", latitude=48.8435089, longitude=2.3586838, taille=27,
+        nom="isir", latitude=48.845807, longitude=2.356564, taille=27,
         macAddresses=str_to_mac([
             "00:F6:63:E6:2E:D4", "00:F6:63:E6:2E:D2", "00:F6:63:E6:2E:D1", "4C:60:DE:3C:2C:FC",
             "10:27:F5:CD:AD:FC", "E8:65:D4:4E:A6:81", "00:F6:63:E6:2F:C4", "E8:65:D4:72:A0:D9",
